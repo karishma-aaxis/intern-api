@@ -1,0 +1,87 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+   url      = env("DATABASE_URL")
+}
+
+//global reusable types.
+ // User roles allowed in the system
+  enum Role {
+    ADMIN
+    CUSTOMER
+  }
+ 
+//database tables
+model User {
+
+  //unique id-acts as PK generated automically by prisma
+  id String @id @default(cuid())  //identity card //permanent identity
+
+  //User full name
+  name String
+
+  // User email address
+  email String @unique    //login identifier
+
+  // Hased user password
+  password String
+ 
+  // User role
+  role Role @default(CUSTOMER)
+
+  // Date and time when the user was created
+  createdAt DateTime @default(now())
+
+  // Date and time whe the order was last updated
+  updatedAt DateTime @updatedAt
+
+  // All ordes belonging to this user
+  orders Order[]
+
+}
+
+// Possible states of an order
+enum OrderStatus { 
+
+  PENDING    //order is created
+  PROCESSING  //order is being prepared
+  SHIPPED  // order sent to custome
+  DELIVERED  //customer revierd order
+  CANCELLED  //oder cacnelled
+}
+
+//Orders table
+model Order { 
+
+  //unique  order id-acts as PK generated automically by prisma
+  id String @id @default(cuid())  //identity card //permanent identity
+  
+  //Stores the ID of the user whole placed the order
+  userId String
+
+  // Reference to the user who owns this order
+  user User @relation(fields:[userId],references:[id])
+
+  //array of {productId,name,price,quantity} 
+  //Prisma's Json type can store structured data.
+  // Ordered products with quantity and price
+  items Json
+
+  //Total amount of the order
+  totalAmount Float
+
+  //Current status of the order
+  status OrderStatus @default(PENDING)
+
+  // Date and time whe the order was created
+  createdAt DateTime @default(now())
+
+  // Date and time whe the order was last updated
+  updatedAt DateTime @updatedAt
+  
+}
+
