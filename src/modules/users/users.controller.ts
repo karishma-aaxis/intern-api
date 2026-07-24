@@ -1,43 +1,38 @@
-// Controller File->Handles request and response
+// User Controller -> Handles user-related business logic
 
-// Import only TypeScript types from Express
-// 'type' keyword is required because of verbatimModuleSyntax: true
+// Import Request and Response types from Express
 import type { Request, Response } from "express";
 
-// Import the reusable Prisma database instance
+// Import reusable Prisma database instance
 import prisma from "../../lib/prisma.js";
 
-// import getUserByIdSchema from user.schema
+// Import Zod schemas for route parameter validation
 import {
   deleteUserSchema,
   getUserByIdSchema,
   updateUserParamsSchema,
 } from "./users.schema.js";
 
+// Import Role enum for authorization checks
 import { Role } from "@prisma/client";
 
-// GET /api/users
-// Returns all users except their passwords
-export const getUsers = async (
-  req: Request, // TypeScript: req must be an Express Request object
-  res: Response, // TypeScript: res must be an Express Response object
-) => {
+// GET /api/users -> Return all users (excluding passwords)
+export const getUsers = async (req: Request, res: Response) => {
   try {
-    // Fetch all users from database
+    // Fetch all users from the database
     const users = await prisma.user.findMany({
+      // Return only safe fields (exclude password)
       select: {
-        // Select only required fields
-        id: true, //true-means "Include this field in the result"
+        id: true,
         name: true,
         email: true,
         role: true,
         createdAt: true,
         updatedAt: true,
-        // password intentionally excluded
       },
     });
 
-    // Send success response
+    // Return the list of users
     return res.status(200).json({
       success: true,
       data: users,
@@ -46,40 +41,36 @@ export const getUsers = async (
     // Log error for debugging
     console.error("Get Users Error:", error);
 
-    // Send failure response
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to fetch errors",
+      error: "Failed to fetch users",
     });
   }
 };
 
-//GET /api/users/user:id
-//returns a single user by id
-export const getUserById = async (
-  req: Request, //Express request object
-  res: Response, //express response object
-) => {
+// GET /api/users/:id -> Return a user by ID
+export const getUserById = async (req: Request, res: Response) => {
   try {
-    // Validate the route parameter using zod
-    const validatedData = getUserByIdSchema.parse(req.params);
+    // Validate the route parameter
+    const validatedParams = getUserByIdSchema.parse(req.params);
 
-    // Allow only admins or the user themselves
+    // Allow only the user or an admin to access the profile
     if (
       req.user?.role !== Role.ADMIN &&
-      req.user?.userId !== validatedData.id
+      req.user?.userId !== validatedParams.id
     ) {
       return res.status(403).json({
-        success: false,
-        message: "Access denied",
+        error: "Access denied",
       });
     }
 
-    //find user in db using the validated id
+    // Find the user by ID
     const user = await prisma.user.findUnique({
       where: {
-        id: validatedData.id,
+        id: validatedParams.id,
       },
+
+      // Return only safe fields
       select: {
         id: true,
         name: true,
@@ -89,15 +80,15 @@ export const getUserById = async (
         updatedAt: true,
       },
     });
-    //Return 404 if user does not exist
+
+    // Return 404 if the user does not exist
     if (!user) {
       return res.status(404).json({
-        success: false,
-        message: "User not found",
+        error: "User not found",
       });
     }
 
-    // Send success response with the user data
+    // Return user details
     return res.status(200).json({
       success: true,
       data: user,
@@ -105,75 +96,73 @@ export const getUserById = async (
   } catch (error) {
     // Log error for debugging
     console.error("Get User Error:", error);
-    // Send failure response
+
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to fetch user",
+      error: "Failed to fetch user",
     });
   }
 };
 
-//PATCH/api/users/:id-> Update a user's name or email
+// PATCH /api/users/:id -> Update a user's name or email
 export const updateUser = async (req: Request, res: Response) => {
   try {
-    //  Validate route paramter
+    // Validate the route parameter
     const validatedParams = updateUserParamsSchema.parse(req.params);
 
-    // Allow only admins or the user themselves
+    // Allow only the user or an admin to update the profile
     if (
       req.user?.role !== Role.ADMIN &&
       req.user?.userId !== validatedParams.id
     ) {
       return res.status(403).json({
-        success: false,
-        message: "Access denied",
+        error: "Access denied",
       });
     }
 
-    // Validate request body
+    // Request body is already validated by the validate middleware
     const validatedBody = req.body;
 
-    // Check whether the user exists in the database
+    // Check whether the user exists
     const existingUser = await prisma.user.findUnique({
       where: {
         id: validatedParams.id,
       },
     });
-    // retun 404 if user is notfound
+
+    // Return 404 if the user does not exist
     if (!existingUser) {
       return res.status(404).json({
-        success: false,
-        message: "User not found",
+        error: "User not found",
       });
     }
 
-    // Create an empty object to store only the fields
-    // that the user wants to update.
-    // TypeScript: name and email are optional.
+    // Create an object to store only the fields that need to be updated
     const updateData: {
       name?: string;
       email?: string;
     } = {};
-    // Check if a new name was provided in the request body.
-    // If yes, add it to the update object.
+
+    // Update name if provided
     if (validatedBody.name !== undefined) {
       updateData.name = validatedBody.name;
     }
-    // Check if a new email was provided in the request body.
-    // If yes, add it to the update object.
+
+    // Update email if provided
     if (validatedBody.email !== undefined) {
       updateData.email = validatedBody.email;
     }
-    // update the user in the db
+
+    // Update the user in the database
     const user = await prisma.user.update({
       where: {
-        //find user usng validiated id
         id: validatedParams.id,
       },
 
-      // Update only the fields present in updateData.
-      // This avoids sending undefined values to Prisma.
+      // Update only provided fields
       data: updateData,
+
+      // Return only safe fields
       select: {
         id: true,
         name: true,
@@ -184,74 +173,76 @@ export const updateUser = async (req: Request, res: Response) => {
       },
     });
 
-    //retrun success response
+    // Return updated user details
     return res.status(200).json({
       success: true,
       data: user,
     });
   } catch (error) {
-    //log error
-    console.error("Update User error:", error);
-    //retunr failure respnose
+    // Log error for debugging
+    console.error("Update User Error:", error);
+
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to update user",
+      error: "Failed to update user",
     });
   }
 };
-// DELETE /api/users/:id-> Delete a user by id
+
+// DELETE /api/users/:id -> Delete a user
 export const deleteUser = async (req: Request, res: Response) => {
   try {
-    // Validate the route parameter using Zod
+    // Validate the route parameter
     const validatedParams = deleteUserSchema.parse(req.params);
 
-    //Check whether the user exists in the db
+    // Check whether the user exists
     const existingUser = await prisma.user.findUnique({
       where: {
         id: validatedParams.id,
       },
     });
-    // return 404 ifthe user does not exist
+
+    // Return 404 if the user does not exist
     if (!existingUser) {
       return res.status(404).json({
-        success: false,
-        message: "User not found",
+        error: "User not found",
       });
     }
-    // Count how many order belong to the user
+
+    // Count the user's existing orders
     const orderCount = await prisma.order.count({
       where: {
         userId: validatedParams.id,
       },
     });
-    //Prevent deletion of the user has existing order
+
+    // Prevent deletion if the user has existing orders
     if (orderCount > 0) {
       return res.status(409).json({
-        success: false,
-        message: "Cannot delete user because they have exisitng orders.",
+        error: "Cannot delete user because they have existing orders.",
       });
     }
-    // Delete the user from db
+
+    // Delete the user from the database
     const user = await prisma.user.delete({
       where: {
         id: validatedParams.id,
       },
     });
-    //send success respnse
+
+    // Return success response
     return res.status(200).json({
       success: true,
-      message: "User data deleted Successfully below shown",
+      message: "User deleted successfully",
       data: user,
     });
   } catch (error) {
     // Log error for debugging
-    console.error("Delete User error:", error);
-    // Send failure response
+    console.error("Delete User Error:", error);
+
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to delete user",
+      error: "Failed to delete user",
     });
   }
 };
-
-// // POST /api/users->Create a new user

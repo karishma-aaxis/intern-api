@@ -1,54 +1,53 @@
-//import re and res types from express;
+// Import Request and Response types from Express
 import type { Request, Response } from "express";
 
-//Import Prisma Client
+// Import Prisma Client for database operations
 import prisma from "../../lib/prisma.js";
 
-// //import signup ,login schema
-// import { signupSchema ,loginSchema } from "./auth.schema.js";
-
-//import bcrypt for password hashing
+// Import bcrypt for password hashing and verification
 import bcrypt from "bcrypt";
 
 // Import helper function to generate JWT tokens after successful login
 import { generateToken } from "../../lib/jwt.js";
 
-//import role enum from Prisma
+// Import Role enum to assign a default role to new users
 import { Role } from "@prisma/client";
 
-//Create new user in the db
+// Signup
+
+// Register a new user
 export const signup = async (req: Request, res: Response) => {
   try {
-    //Request body is already validtae by the valdiate middlware
-    const validateBody = req.body;
+    // Request body is already validated by the validate middleware
+    const validatedBody = req.body;
 
-    //Check whether the email alraeady exists
-    const exisitngUser = await prisma.user.findUnique({
+    // Check if the email is already registered
+    const existingUser = await prisma.user.findUnique({
       where: {
-        email: validateBody.email,
+        email: validatedBody.email,
       },
     });
 
-    //return 409 if email already registerd
-    if (exisitngUser) {
+    // Return 409 Conflict if the email already exists
+    if (existingUser) {
       return res.status(409).json({
-        success: false,
-        message: "Email already exists",
+        error: "Email already exists",
       });
     }
 
-    //hash password before storing it in the db
-    const hashedPassword = await bcrypt.hash(validateBody.password, 10);
+    // Hash the password before storing it in the database
+    const hashedPassword = await bcrypt.hash(validatedBody.password, 10);
 
-    //Create a new User in the db
+    // Create a new user in the database
     const createUser = await prisma.user.create({
       data: {
-        name: validateBody.name,
-        email: validateBody.email,
+        name: validatedBody.name,
+        email: validatedBody.email,
         password: hashedPassword,
-        role: Role.CUSTOMER,
+        role: Role.CUSTOMER, // Assign the default CUSTOMER role
       },
-      //Return selected fields (exclued password)
+
+      // Return only safe fields (exclude password)
       select: {
         id: true,
         name: true,
@@ -59,74 +58,76 @@ export const signup = async (req: Request, res: Response) => {
       },
     });
 
-    //return success response with created user details
+    // Return the newly created user
     return res.status(201).json({
       success: true,
       data: createUser,
     });
   } catch (error) {
-    // Log error for debugging
-    console.error("Signup  error", error);
-    // Send failure response
+    // Log the error for debugging
+    console.error("Signup Error:", error);
+
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to register user",
+      error: "Failed to register user",
     });
   }
 };
 
-//post /api/auth/login
+// Login
 
+// Authenticate an existing user
 export const login = async (req: Request, res: Response) => {
-  console.log("Login API called");
   try {
-    //Request body is already validtae by the valdiate middlware
-    const validateBody = req.body;
+    // Request body is already validated by the validate middleware
+    const validatedBody = req.body;
 
-    //find user by email
+    // Find the user by email
     const user = await prisma.user.findUnique({
       where: {
-        email: validateBody.email,
+        email: validatedBody.email,
       },
     });
-    //User not found
+
+    // Return 401 if the user does not exist
     if (!user) {
       return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
+        error: "Invalid email or password",
       });
     }
-    //compared entered password with stoed hashed password
+
+    // Compare the entered password with the stored hashed password
     const isPasswordValid = await bcrypt.compare(
-      validateBody.password, //user enter passowrd
-      user.password, //db passsowrd
+      validatedBody.password, // Password entered by the user
+      user.password, // Hashed password stored in the database
     );
 
-    // password is incorrect
+    // Return 401 if the password is incorrect
     if (!isPasswordValid) {
       return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
+        error: "Invalid email or password",
       });
     }
 
-    // Generate JWT token after successful login
+    // Generate a JWT token after successful login
     const token = generateToken({
-      userId: user.id, //check order belong to thisuser
-      email: user.email, // to display logged-in user
-      role: user.role, //role in middleware
+      userId: user.id,
+      email: user.email,
+      role: user.role,
     });
 
-    //return success response with generated jwt token
+    // Return the generated JWT token to the client
     return res.status(200).json({
       success: true,
       token,
     });
   } catch (error) {
-    console.error("login Error", error);
+    // Log the error for debugging
+    console.error("Login Error:", error);
+
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: ":login Failed",
+      error: "Login failed",
     });
   }
 };

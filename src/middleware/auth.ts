@@ -4,7 +4,7 @@ import type { Request, Response, NextFunction } from "express";
 // Import jsonwebtoken library
 import jwt from "jsonwebtoken";
 
-//Import Role enum from Prisma
+// Import Role enum from Prisma
 import { Role } from "@prisma/client";
 
 // Middleware to verify JWT before allowing access to protected routes
@@ -13,46 +13,43 @@ export const authenticate = (
   res: Response,
   next: NextFunction,
 ) => {
-  // Read Authorization header
+  // Read the Authorization header
   const authHeader = req.headers.authorization;
 
-  // Check if Authorization header is missing
+  // Return 401 if the Authorization header is missing
   if (!authHeader) {
     return res.status(401).json({
-      success: false,
-      message: "Authorization token is required",
+      error: "Authorization token is required",
     });
   }
 
-  // Extract token from "Bearer <token>"
+  // Extract the JWT token from "Bearer <token>"
   const token = authHeader.split(" ")[1];
 
-  // Check if token is missing
+  // Return 401 if the token is missing
   if (!token) {
     return res.status(401).json({
-      success: false,
-      message: "Token is missing",
+      error: "Token is missing",
     });
   }
 
   try {
-    // Verify JWT token
+    // Verify the JWT token using the secret key
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
 
-    // Attach authenticated user information to the request
+    // Attach the authenticated user's information to the request
     req.user = decoded as {
       userId: string;
       email: string;
       role: Role;
     };
 
-    // Continue to the next middleware or route handler
+    // Token is valid, continue to the next middleware or controller
     next();
   } catch {
-    // Return 401 if token is invalid or expired
+    // Return 401 if the token is invalid or expired
     return res.status(401).json({
-      success: false,
-      message: "Invalid or expired token",
+      error: "Invalid or expired token",
     });
   }
 };

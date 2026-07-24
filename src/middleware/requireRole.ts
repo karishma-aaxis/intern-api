@@ -1,21 +1,20 @@
-//import Request,Response and NextFunction types from Expresss
+// Import Request, Response, and NextFunction types from Express
 import type { Request, Response, NextFunction } from "express";
 
-//import Role enum fron Prisma
+// Import Role enum from Prisma for ROLES
 import { Role } from "@prisma/client";
 
-//Middleware Factory to allow only user woth a specific role
+// Reusable middleware to allow access only to users with the required role
 export const requireRole = (role: Role) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    //Check if the authneicted user has the required role
+    // Check whether the authenticated user has the required role
     if (req.user?.role !== role) {
       return res.status(403).json({
-        success: false,
-        message: "Access denied",
+        error: "Access denied",
       });
     }
 
-    //User has the required role
+    // User has the required role, continue to the next middleware or controller
     return next();
   };
 };

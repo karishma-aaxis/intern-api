@@ -1,20 +1,15 @@
-//Import Zod Validation library
+// Import Zod validation library
 import { z } from "zod";
 
-//Validate signup request  body
+// Validation schema for user signup
 export const signupSchema = z.object({
-  //Name is required
-  name: z.string().min(1, "Name is required"),
-  //Email must be valid
-  email: z.email("Invalid email address"),
-  //password must contain at least  8 charcters
-  password: z.string().min(8, "password must be at least 8 charcters"),
+  name: z.string().min(1, "Name is required"), // User's full name
+  email: z.email("Invalid email address"), // User's email address
+  password: z.string().min(8, "Password must be at least 8 characters"), // Password must be at least 8 characters
 });
 
-//Validate login request body
+// Validation schema for user login
 export const loginSchema = z.object({
-  //Email must be valid
-  email: z.email("Invalid email address"),
-  //Password is requrued
-  password: z.string().min(1, "Password is required "),
+  email: z.email("Invalid email address"), // User's email address
+  password: z.string().min(1, "Password is required"), // Password is required
 });

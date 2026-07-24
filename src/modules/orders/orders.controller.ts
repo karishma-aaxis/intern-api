@@ -1,86 +1,73 @@
-// Controller File -> Handles request and response
+// Order Controller -> Handles order-related business logic
 
-// Import only TypeScript types from Express
+// Import Request and Response types from Express
 import type { Request, Response } from "express";
 
 // Import reusable Prisma database instance
 import prisma from "../../lib/prisma.js";
 
-// Import Zod schema
+// Import Zod schemas for request validation
 import {
   createOrderschema,
   deleteOrderSchema,
   getOrderByIdSchema,
   updateOrderByBodySchema,
-  updateorderByIdSchema,
+  updateOrderByIdSchema,
 } from "./orders.schema.js";
 
+// Import Role enum for authorization checks
 import { Role } from "@prisma/client";
 
-// POST /api/orders-> Create a new order
+// POST /api/orders -> Create a new order
 export const createOrder = async (req: Request, res: Response) => {
   try {
-    // Validate request body using Zod
+    // Validate request body
     const validatedBody = createOrderschema.parse(req.body);
+
+    // Get authenticated user's ID from JWT
     const userId = req.user!.userId;
 
-    // Check whether the user exists
-
-    // const existingUser = await prisma.user.findUnique({
-    //   where: {
-    //     id: validatedBody.userId,
-    //   },
-    // });
-
-    // Return 404 if user does not exist
-    // if (!existingUser) {
-    //   return res.status(404).json({
-    //     success: false,
-    //     message: "User not found",
-    //   });
-    // }
     // Calculate total amount on the server
-    // (price × quantity for each item)
     const totalAmount = validatedBody.items.reduce(
       (total, item) => total + item.price * item.quantity,
       0,
     );
-    // Create order in database
-    // create order in db
+
+    // Create a new order
     const order = await prisma.order.create({
       data: {
         userId,
         items: validatedBody.items,
-        totalAmount: totalAmount,
+        totalAmount,
       },
     });
 
-    // Return success response
+    // Return created order
     return res.status(201).json({
       success: true,
       data: order,
     });
   } catch (error) {
     // Log error for debugging
-    console.error("Create order error:", error);
+    console.error("Create Order Error:", error);
 
-    // Return failure response
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to create order",
+      error: "Failed to create order",
     });
   }
 };
-// GET /api/orders-> Get Order
+
+// GET /api/orders -> Return orders
 export const getOrders = async (req: Request, res: Response) => {
   try {
-    // // Fetch all orders from the database
-    // const orders = await prisma.order.findMany();
     let orders;
 
+    // Admin can view all orders
     if (req.user?.role === Role.ADMIN) {
       orders = await prisma.order.findMany();
     } else {
+      // Customers can view only their own orders
       orders = await prisma.order.findMany({
         where: {
           userId: req.user!.userId,
@@ -88,30 +75,29 @@ export const getOrders = async (req: Request, res: Response) => {
       });
     }
 
-    // Return success response
+    // Return orders
     return res.status(200).json({
       success: true,
       data: orders,
     });
   } catch (error) {
     // Log error for debugging
-    console.error("Get Order error:", error);
+    console.error("Get Orders Error:", error);
 
-    // Return failure response
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to fetch orders",
+      error: "Failed to fetch orders",
     });
   }
 };
 
-// GET /api/orders/:id->Returns a single order by id
+// GET /api/orders/:id -> Return an order by ID
 export const getOrdersById = async (req: Request, res: Response) => {
   try {
-    // Validate the route parameter using Zod
+    // Validate route parameter
     const validatedParams = getOrderByIdSchema.parse(req.params);
 
-    // Find order in database using the validated id
+    // Find the order
     const order = await prisma.order.findUnique({
       where: {
         id: validatedParams.id,
@@ -121,40 +107,39 @@ export const getOrdersById = async (req: Request, res: Response) => {
     // Return 404 if order does not exist
     if (!order) {
       return res.status(404).json({
-        success: false,
-        message: "Order not found",
+        error: "Order not found",
       });
     }
 
+    // Allow only the order owner or an admin
     if (req.user?.role !== Role.ADMIN && order.userId !== req.user?.userId) {
       return res.status(403).json({
         success: false,
-        message: "Access denied",
+        error: "Access denied",
       });
     }
 
-    // Return success response
+    // Return order details
     return res.status(200).json({
       success: true,
       data: order,
     });
   } catch (error) {
     // Log error for debugging
-    console.log("Get Order error", error);
+    console.error("Get Order Error:", error);
 
-    // Return failure response
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to fetch",
+      error: "Failed to fetch order",
     });
   }
 };
 
-// PATCH /api/orders/:id/status->Update an order's status
-export const udpateOrderStatus = async (req: Request, res: Response) => {
+// PATCH /api/orders/:id/status -> Update an order's status
+export const updateOrderStatus = async (req: Request, res: Response) => {
   try {
     // Validate route parameter
-    const validatedParams = updateorderByIdSchema.parse(req.params);
+    const validatedParams = updateOrderByIdSchema.parse(req.params);
 
     // Validate request body
     const validatedBody = updateOrderByBodySchema.parse(req.body);
@@ -165,16 +150,16 @@ export const udpateOrderStatus = async (req: Request, res: Response) => {
         id: validatedParams.id,
       },
     });
+
     // Return 404 if order does not exist
     if (!existingOrder) {
       return res.status(404).json({
-        success: false,
-        message: "Order not found",
+        error: "Order not found",
       });
     }
 
-    // Update order status
-    const updateOrder = await prisma.order.update({
+    // Update the order status
+    const updatedOrder = await prisma.order.update({
       where: {
         id: validatedParams.id,
       },
@@ -183,42 +168,44 @@ export const udpateOrderStatus = async (req: Request, res: Response) => {
       },
     });
 
-    // Return success response
+    // Return updated order
     return res.status(200).json({
       success: true,
-      data: updateOrder,
+      data: updatedOrder,
     });
   } catch (error) {
     // Log error for debugging
-    console.error("Update roder status error:", error);
+    console.error("Update Order Status Error:", error);
+
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to update order status",
+      error: "Failed to update order status",
     });
   }
 };
 
-// DELETE /api/orders/:id-> Delete an order by id
+// DELETE /api/orders/:id -> Delete an order
 export const deleteOrder = async (req: Request, res: Response) => {
   try {
     // Validate route parameter
     const validatedParams = deleteOrderSchema.parse(req.params);
+
     // Check whether the order exists
     const existingOrder = await prisma.order.findUnique({
       where: {
         id: validatedParams.id,
       },
     });
+
     // Return 404 if order does not exist
     if (!existingOrder) {
       return res.status(404).json({
-        success: false,
-        message: "Order not found",
+        error: "Order not found",
       });
     }
 
-    // Delete order from database
-    const deleteOrder = await prisma.order.delete({
+    // Delete the order
+    const deletedOrder = await prisma.order.delete({
       where: {
         id: validatedParams.id,
       },
@@ -227,17 +214,16 @@ export const deleteOrder = async (req: Request, res: Response) => {
     // Return success response
     return res.status(200).json({
       success: true,
-      message: "Order dlelted successflly below shown",
-      data: deleteOrder,
+      message: "Order deleted successfully",
+      data: deletedOrder,
     });
   } catch (error) {
     // Log error for debugging
-    console.error("Delete Order error:", error);
+    console.error("Delete Order Error:", error);
 
-    // Return failure response
+    // Return internal server error
     return res.status(500).json({
-      success: false,
-      message: "Failed to Delete order",
+      error: "Failed to delete order",
     });
   }
 };

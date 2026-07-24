@@ -1,44 +1,45 @@
-// Router File->Defines API endpoints
+// User Router -> Defines user API routes
 
-// Import Router function from Express-> Router is used to create route groups
-// Import ExpressRouter type for TypeScript->This gives type safety to our router variable
+// Import Router from Express
 import { Router, type Router as ExpressRouter } from "express";
 
-// Import controller function that handles GET /api/users
+// Import user controller functions
 import {
   getUsers,
   getUserById,
   updateUser,
   deleteUser,
 } from "./users.controller.js";
-//Import authentciation middleware
-import { authenticate } from "../../middleware/auth.js";
-//Import role-based authorization middlware
-import { requireRole } from "../../middleware/requireRole.js";
-//Import Role enum from Prisma
-import { Role } from "@prisma/client";
 
+// Import authentication middleware
+import { authenticate } from "../../middleware/auth.js";
+
+// Import role-based authorization middleware
+import { requireRole } from "../../middleware/requireRole.js";
+
+// Import request validation middleware
 import { validate } from "../../middleware/validate.js";
+
+// Import Zod schema for update validation
 import { updateUserBodySchema } from "./users.schema.js";
 
+// Import Role enum
+import { Role } from "@prisma/client";
+
 // Create a new router instance
-// TypeScript knows this variable is an Express Router
 const router: ExpressRouter = Router();
 
-// GET /api/users->Returns all users (Admin only)
-// When a client sends a GET request to /api/users, execute the getUsers controller
+// GET /api/users -> Return all users (Admin only)
 router.get("/", authenticate, requireRole(Role.ADMIN), getUsers);
 
-// GET /api/users/:id->Returns a single user by id (Admin or the user themselves)
+// GET /api/users/:id -> Return a user by ID (Admin or the user)
 router.get("/:id", authenticate, getUserById);
 
-// PATCH /api/users/:id-> Update a user's name or email(Admin or the user themselves)
-// (Partial Update)
+// PATCH /api/users/:id -> Update a user (Admin or the user)
 router.patch("/:id", authenticate, validate(updateUserBodySchema), updateUser);
 
-// DELETE /api/users/:id-> Deletes a user by id (Admin only)
+// DELETE /api/users/:id -> Delete a user (Admin only)
 router.delete("/:id", authenticate, requireRole(Role.ADMIN), deleteUser);
 
-
+// Export router
 export default router;
-// Export router so it can be used in index.ts

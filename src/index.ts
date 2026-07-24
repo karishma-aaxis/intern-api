@@ -1,38 +1,34 @@
 // Import Express framework
 import express from "express";
-// Import users router
-import userRouter from "./modules/users/users.router.js";
-// import order router
-import orderRouter from "./modules/orders/orders.router.js";
-// Import auth router
-import authRouter from "./modules/auth/auth.router.js";
 
+// Load environment variables
 import "dotenv/config";
 
-// Create Express application instance
+// Import module routers
+import userRouter from "./modules/users/users.router.js";
+import orderRouter from "./modules/orders/orders.router.js";
+import authRouter from "./modules/auth/auth.router.js";
+
+// Create Express application
 const app = express();
 
-// Middleware
-// Parse JSON request bodies-> Converts incoming JSON requests into JavaScript objects
+// Parse incoming JSON request bodies
 app.use(express.json());
 
-// Port number where server will run
+// Server port
 const PORT = process.env.PORT || 3000;
 
-// Root route-> When user visits http://localhost:3000
+// Root route
 app.get("/", (_req, res) => {
-  // Send response back to client
   res.send("API is running");
 });
 
-// User Routes->All routes in users.router.ts will start with /api/users
+// Register application routes
 app.use("/api/users", userRouter);
-// Order Routes
 app.use("/api/orders", orderRouter);
-//Auth  Routes
 app.use("/api/auth", authRouter);
 
-// Start Express servers
+// Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
