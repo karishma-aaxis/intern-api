@@ -30,6 +30,7 @@ export default [
     ignores: [
       "dist/**",
       "node_modules/**",
+      "prisma/seed.ts", // ✅ Add this
       "prisma.config.ts",
       "prisma.config.js",
       "prisma.config.d.ts",

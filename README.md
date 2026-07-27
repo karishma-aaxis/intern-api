@@ -1,6 +1,6 @@
 # Intern API - Orders & Authentication
 
-REST API for authentication and order management using Node.js, Express, TypeScript, Prisma, and PostgreSQL.
+REST API for authentication and order management using Node.js, Express.js, TypeScript, Prisma, and PostgreSQL.
 
 ## Tech Stack
 
@@ -43,23 +43,35 @@ pnpm prisma generate
 pnpm prisma db seed
 ```
 
+### Seed Users
+
+**Admin**
+
+- Email: `admin@example.com`
+- Password: `admin123`
+
+**Customer**
+
+- Email: `customer@example.com`
+- Password: `customer123`
+
 ---
 
 ## Run
 
-Development:
+Development
 
 ```bash
 pnpm dev
 ```
 
-Build:
+Build
 
 ```bash
 pnpm build
 ```
 
-Start:
+Start
 
 ```bash
 pnpm start
@@ -112,24 +124,19 @@ Authorization: Bearer <JWT_TOKEN>
 - JWT authentication
 - Role-based authorization
 - Password hashing with bcrypt
-- Zod validation
-- Prisma + PostgreSQL database
+- Zod request validation
+- Prisma ORM with PostgreSQL
 - User and Order management
 - Server-side order total calculation
+- Users with existing orders cannot be deleted
+- Global error handling
 - ESLint and Prettier configured
 
 ---
 
 ## Code Quality
 
-Lint:
-
 ```bash
 pnpm lint
-```
-
-Format:
-
-```bash
 pnpm format
 ```
