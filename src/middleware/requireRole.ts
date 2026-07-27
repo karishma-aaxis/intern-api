@@ -2,7 +2,7 @@
 import type { Request, Response, NextFunction } from "express";
 
 // Import Role enum from Prisma for ROLES
-import { Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
 // Reusable middleware to allow access only to users with the required role
 export const requireRole = (role: Role) => {

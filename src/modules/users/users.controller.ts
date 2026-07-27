@@ -20,7 +20,7 @@ import {
 import { Role } from "@prisma/client";
 
 // GET /api/users -> Return all users (excluding passwords)
-export const getUsers = asyncHandler(async (req: Request, res: Response) => {
+export const getUsers = asyncHandler(async (_req: Request, res: Response) => {
   // Fetch all users from the database
   const users = await prisma.user.findMany({
     // Return only safe fields (exclude password)

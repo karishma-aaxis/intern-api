@@ -2,7 +2,7 @@
 import jwt from "jsonwebtoken";
 
 // Import Role enum from Prisma
-import { Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
 // Generate a JWT token for an authenticated user
 export const generateToken = (payload: {

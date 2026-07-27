@@ -5,7 +5,7 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 // Import Role enum from Prisma
-import { Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
 // Middleware to verify JWT before allowing access to protected routes
 export const authenticate = (

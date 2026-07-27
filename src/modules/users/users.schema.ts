@@ -7,9 +7,7 @@ export const getUserByIdSchema = z.object({
 });
 
 // Validate the user ID for update requests
-export const updateUserParamsSchema = z.object({
-  id: z.string().min(1, "User id is required"), // User ID must be a non-empty string
-});
+export const updateUserParamsSchema = getUserByIdSchema // User ID must be a non-empty string
 
 // Validate the request body for updating a user
 export const updateUserBodySchema = z.object({
@@ -18,7 +16,5 @@ export const updateUserBodySchema = z.object({
 });
 
 // Validate the user ID for delete requests
-export const deleteUserSchema = z.object({
-  id: z.string().min(1, "User id is required"), // User ID must be a non-empty string
-});
+export const deleteUserSchema = getUserByIdSchema // User ID must be a non-empty string
 

@@ -130,6 +130,8 @@ Authorization: Bearer <JWT_TOKEN>
 - Server-side order total calculation
 - Users with existing orders cannot be deleted
 - Global error handling
+- Async controller wrapper (`asyncHandler`)
+- CORS enabled
 - ESLint and Prettier configured
 
 ---

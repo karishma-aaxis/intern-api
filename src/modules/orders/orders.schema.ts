@@ -7,7 +7,7 @@ import { OrderStatus } from "@prisma/client";
 // Order Item Schema
 
 // Validate a single item inside an order
-export const orderItemSchema = z.object({
+const orderItemSchema = z.object({
   productId: z.string().min(1, "Product id is required"), // Product ID must not be empty
   name: z.string().min(1, "Product name is required"), // Product name must not be empty
   price: z.number().positive("Price must be greater than 0"), // Price must be greater than 0
@@ -33,9 +33,7 @@ export const getOrderByIdSchema = z.object({
 //  Update Order Schema
 
 // Validate order ID from route parameters
-export const updateOrderByIdSchema = z.object({
-  id: z.string().min(1, "Order id is required"), // Order ID must not be empty
-});
+export const updateOrderByIdSchema = getOrderByIdSchema; // Order ID must not be empty
 
 // Validate request body for updating order status
 export const updateOrderByBodySchema = z.object({
@@ -45,6 +43,4 @@ export const updateOrderByBodySchema = z.object({
 //Delete Order Schema
 
 // Validate order ID from route parameters
-export const deleteOrderSchema = z.object({
-  id: z.string().min(1, "Order id is required"), // Order ID must not be empty
-});
+export const deleteOrderSchema = getOrderByIdSchema; // Order ID must not be empty

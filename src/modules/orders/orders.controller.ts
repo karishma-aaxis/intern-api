@@ -14,7 +14,6 @@ import {
   createOrderschema,
   deleteOrderSchema,
   getOrderByIdSchema,
-  updateOrderByBodySchema,
   updateOrderByIdSchema,
 } from "./orders.schema.js";
 
@@ -28,13 +27,6 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
 
   // Get authenticated user's ID from JWT
   const userId = req.user!.userId;
-
-  // // Return 401 if the authenticated user is not available
-  if (!userId) {
-    return res.status(401).json({
-      error: "Unauthorized",
-    });
-  }
 
   // Calculate total amount on the server
   const totalAmount = validatedBody.items.reduce(
@@ -124,7 +116,7 @@ export const updateOrderStatus = asyncHandler(
     const validatedParams = updateOrderByIdSchema.parse(req.params);
 
     // Validate request body
-    const validatedBody = updateOrderByBodySchema.parse(req.body);
+    const validatedBody = req.body;
 
     // Check whether the order exists
     const existingOrder = await prisma.order.findUnique({
