@@ -12,6 +12,8 @@ REST API for authentication and order management using Node.js, Express.js, Type
 - JWT
 - bcrypt
 - Zod
+- Helmet
+- express-rate-limit
 - ESLint
 - Prettier
 
@@ -125,11 +127,17 @@ Authorization: Bearer <JWT_TOKEN>
 - Role-based authorization
 - Password hashing with bcrypt
 - Zod request validation
+- Environment variable validation
+- Helmet security headers
+- Rate limiting for authentication routes
+- Request body size limit
 - Prisma ORM with PostgreSQL
 - User and Order management
 - Server-side order total calculation
-- Users with existing orders cannot be deleted
-- Global error handling
+- Pagination for Users and Admin Orders
+- Reusable `requireOwnerOrAdmin` middleware
+- Global error handling with custom `HttpError`
+- Prisma error handling
 - Async controller wrapper (`asyncHandler`)
 - CORS enabled
 - ESLint and Prettier configured
