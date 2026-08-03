@@ -17,6 +17,9 @@ import { authenticate } from "../../middleware/auth.js";
 // Import role-based authorization middleware
 import { requireRole } from "../../middleware/requireRole.js";
 
+// Import owner or admin authorization middleware
+import { requireOwnerOrAdmin } from "../../middleware/requireOwnerOrAdmin.js";
+
 // Import request validation middleware
 import { validate } from "../../middleware/validate.js";
 
@@ -33,10 +36,10 @@ const router: ExpressRouter = Router();
 router.get("/", authenticate, requireRole(Role.ADMIN), getUsers);
 
 // GET /api/users/:id -> Return a user by ID (Admin or the user)
-router.get("/:id", authenticate, getUserById);
+router.get("/:id", authenticate, requireOwnerOrAdmin,getUserById);
 
 // PATCH /api/users/:id -> Update a user (Admin or the user)
-router.patch("/:id", authenticate, validate(updateUserBodySchema), updateUser);
+router.patch("/:id", authenticate,requireOwnerOrAdmin, validate(updateUserBodySchema), updateUser);
 
 // DELETE /api/users/:id -> Delete a user (Admin only)
 router.delete("/:id", authenticate, requireRole(Role.ADMIN), deleteUser);

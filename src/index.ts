@@ -5,7 +5,7 @@ import express from "express";
 import cors from "cors";
 
 // Load environment variables
-import "dotenv/config";
+import { env } from "./config/env.js";
 
 // Import module routers
 import userRouter from "./modules/users/users.router.js";
@@ -16,17 +16,31 @@ import authRouter from "./modules/auth/auth.router.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
 
+import helmet from "helmet";
+
+// Import authentication rate limiter
+import { authLimiter } from "./middleware/rateLimiter.js";
+
 // Create Express application
 const app = express();
 
-// Enable Cross-Origin Resource Sharing (CORS)
-app.use(cors());
+// Enable security headers
+app.use(helmet());
 
-// Parse incoming JSON request bodies
-app.use(express.json());
+// Allow requests only from the trusted frontend origin
+app.use(
+  cors({
+    origin: "http://localhost:5173", // React development server (replace with production frontend URL after deployment)
+    // credentials: true, // Enable when using cookie-based authentication
+  })
+);
+// Parse incoming JSON request bodies and limit payload size to 10 KB
+app.use(express.json({
+      limit: "10kb",
+}));
 
 // Server port
-const PORT = process.env.PORT || 3000;
+const PORT = env.PORT;
 
 // Root route
 app.get("/", (_req, res) => {
@@ -36,7 +50,7 @@ app.get("/", (_req, res) => {
 // Register application routes
 app.use("/api/users", userRouter);
 app.use("/api/orders", orderRouter);
-app.use("/api/auth", authRouter);
+app.use("/api/auth", authLimiter,authRouter);  // Apply rate limiting only to authentication routes
 
 // Handle unknown routes(404)
 app.use(notFound);

@@ -4,6 +4,9 @@ import type { Request, Response } from "express";
 // Import async handler wrapper
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 
+// Import custom HTTP error class for application-specific errors
+import { HttpError } from "../../utils/HttpError.js";
+
 // Import Prisma Client for database operations
 import prisma from "../../lib/prisma.js";
 
@@ -30,11 +33,9 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  // Return 409 Conflict if the email already exists
+  // Throw a 409 Conflict error if the email already exists
   if (existingUser) {
-    return res.status(409).json({
-      error: "Email already exists",
-    });
+      throw new HttpError(409, "Email already exists");
   }
 
   // Hash the password before storing it in the database
@@ -81,11 +82,9 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  // Return 401 if the user does not exist
+  // Throw a 401 Unauthorized error if the user does not exist
   if (!user) {
-    return res.status(401).json({
-      error: "Invalid email or password",
-    });
+    throw new HttpError(401, "Invalid email or password");
   }
 
   // Compare the entered password with the stored hashed password
@@ -94,11 +93,9 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     user.password, // Hashed password stored in the database
   );
 
-  // Return 401 if the password is incorrect
+  // Throw a 401 Unauthorized error if the password is incorrect
   if (!isPasswordValid) {
-    return res.status(401).json({
-      error: "Invalid email or password",
-    });
+    throw new HttpError(401, "Invalid email or password");
   }
 
   // Generate a JWT token after successful login

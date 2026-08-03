@@ -7,6 +7,10 @@ import jwt from "jsonwebtoken";
 // Import Role enum from Prisma
 import type { Role } from "@prisma/client";
 
+// Import validated environment variables
+import { env } from "../config/env.js";
+
+
 // Middleware to verify JWT before allowing access to protected routes
 export const authenticate = (
   req: Request,
@@ -34,8 +38,8 @@ export const authenticate = (
   }
 
   try {
-    // Verify the JWT token using the secret key
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+   // Verify the JWT token using the validated secret key
+    const decoded = jwt.verify(token, env.JWT_SECRET);
 
     // Attach the authenticated user's information to the request
     req.user = decoded as {

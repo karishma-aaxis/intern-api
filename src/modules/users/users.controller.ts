@@ -6,6 +6,9 @@ import type { Request, Response } from "express";
 // Import async handler wrapper
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 
+// Import custom HTTP error class for application-specific errors
+import { HttpError } from "../../utils/HttpError.js";
+
 // Import reusable Prisma database instance
 import prisma from "../../lib/prisma.js";
 
@@ -16,13 +19,26 @@ import {
   updateUserParamsSchema,
 } from "./users.schema.js";
 
-// Import Role enum for authorization checks
-import { Role } from "@prisma/client";
 
 // GET /api/users -> Return all users (excluding passwords)
-export const getUsers = asyncHandler(async (_req: Request, res: Response) => {
-  // Fetch all users from the database
+export const getUsers = asyncHandler(async (req: Request, res: Response) => {
+  
+  // Read pagination values from query parameters
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.max(1, Number(req.query.limit) || 10);
+
+  // Calculate how many records to skip
+  const skip = (page - 1) * limit;
+
+  // Count the total number of users
+  const totalUsers = await prisma.user.count();
+
+  
+  // Fetch users for the current page
   const users = await prisma.user.findMany({
+    skip,
+    take: limit,
+
     // Return only safe fields (exclude password)
     select: {
       id: true,
@@ -34,11 +50,14 @@ export const getUsers = asyncHandler(async (_req: Request, res: Response) => {
     },
   });
 
-  // Return the list of users
   return res.status(200).json({
-    success: true,
-    data: users,
-  });
+  success: true,
+  page,
+  limit,
+  totalUsers,
+  totalPages: Math.ceil(totalUsers / limit),
+  data: users,
+});
 });
 
 // GET /api/users/:id -> Return a user by ID
@@ -46,15 +65,7 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
   // Validate the route parameter
   const validatedParams = getUserByIdSchema.parse(req.params);
 
-  // Allow only the user or an admin to access the profile
-  if (
-    req.user?.role !== Role.ADMIN &&
-    req.user?.userId !== validatedParams.id
-  ) {
-    return res.status(403).json({
-      error: "Access denied",
-    });
-  }
+  
 
   // Find the user by ID
   const user = await prisma.user.findUnique({
@@ -73,11 +84,9 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  // Return 404 if the user does not exist
+  // Throw a 404 Not Found error if the user does not exist
   if (!user) {
-    return res.status(404).json({
-      error: "User not found",
-    });
+    throw new HttpError(404, "User not found");
   }
 
   // Return user details
@@ -92,15 +101,6 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   // Validate the route parameter
   const validatedParams = updateUserParamsSchema.parse(req.params);
 
-  // Allow only the user or an admin to update the profile
-  if (
-    req.user?.role !== Role.ADMIN &&
-    req.user?.userId !== validatedParams.id
-  ) {
-    return res.status(403).json({
-      error: "Access denied",
-    });
-  }
 
   // Request body is already validated by the validate middleware
   const validatedBody = req.body;
@@ -112,11 +112,9 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  // Return 404 if the user does not exist
+  // Throw a 404 Not Found error if the user does not exist
   if (!existingUser) {
-    return res.status(404).json({
-      error: "User not found",
-    });
+    throw new HttpError(404, "User not found");
   }
 
   // Create an object to store only the fields that need to be updated
@@ -174,11 +172,9 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  // Return 404 if the user does not exist
+  // Throw a 404 Not Found error if the user does not exist
   if (!existingUser) {
-    return res.status(404).json({
-      error: "User not found",
-    });
+   throw new HttpError(404, "User not found");
   }
 
   // Count the user's existing orders
@@ -188,11 +184,12 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  // Prevent deletion if the user has existing orders
+ // Throw a 409 Conflict error if the user has existing orders
   if (orderCount > 0) {
-    return res.status(409).json({
-      error: "Cannot delete user because they have existing orders.",
-    });
+    throw new HttpError(
+    409,
+    "Cannot delete user because they have existing orders.",
+  );
   }
 
   // Delete the user from the database

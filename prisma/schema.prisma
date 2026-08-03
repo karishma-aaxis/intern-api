@@ -81,6 +81,9 @@ model Order {
 
   // Date and time whe the order was last updated
   updatedAt DateTime @updatedAt
+
+
+   @@index([userId])
   
 }
 

@@ -6,6 +6,9 @@ import type { Request, Response } from "express";
 // Import async handler wrapper
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 
+// Import custom HTTP error class for application-specific errors
+import { HttpError } from "../../utils/HttpError.js";
+
 // Import reusable Prisma database instance
 import prisma from "../../lib/prisma.js";
 
@@ -52,26 +55,50 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
 
 // GET /api/orders -> Return orders
 export const getOrders = asyncHandler(async (req: Request, res: Response) => {
+  // Read pagination values from query parameters
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.max(1, Number(req.query.limit) || 10);
+
+  // Calculate how many records to skip
+  const skip = (page - 1) * limit;
+
   let orders;
 
   // Admin can view all orders
   if (req.user?.role === Role.ADMIN) {
-    orders = await prisma.order.findMany();
-  } else {
-    // Customers can view only their own orders
+    // Count total orders
+    const totalOrders = await prisma.order.count();
+
+    // Fetch paginated orders
     orders = await prisma.order.findMany({
-      where: {
-        userId: req.user!.userId,
-      },
+      skip,
+      take: limit,
+    });
+
+    return res.status(200).json({
+      success: true,
+      page,
+      limit,
+      totalOrders,
+      totalPages: Math.ceil(totalOrders / limit),
+      data: orders,
     });
   }
 
-  // Return orders
+  // Customers can view only their own orders
+  orders = await prisma.order.findMany({
+    where: {
+      userId: req.user!.userId,
+    },
+  });
+
+  // Return customer orders
   return res.status(200).json({
     success: true,
     data: orders,
   });
 });
+
 
 // GET /api/orders/:id -> Return an order by ID
 export const getOrdersById = asyncHandler(
@@ -82,23 +109,19 @@ export const getOrdersById = asyncHandler(
     // Find the order
     const order = await prisma.order.findUnique({
       where: {
-        // Return 401 if the authenticated user is not available
+        // Find the order by its ID
         id: validatedParams.id,
       },
     });
 
-    // Return 404 if order does not exist
+    // Throw a 404 Not Found error if the order does not exist
     if (!order) {
-      return res.status(404).json({
-        error: "Order not found",
-      });
+        throw new HttpError(404, "Order not found");
     }
 
-    // Allow only the order owner or an admin
+    // Throw a 403 Forbidden error if the user is not authorized
     if (req.user?.role !== Role.ADMIN && order.userId !== req.user?.userId) {
-      return res.status(403).json({
-        error: "Access denied",
-      });
+      throw new HttpError(403, "Access denied");
     }
 
     // Return order details
@@ -125,11 +148,9 @@ export const updateOrderStatus = asyncHandler(
       },
     });
 
-    // Return 404 if order does not exist
+    // Throw a 404 Not Found error if the order does not exist
     if (!existingOrder) {
-      return res.status(404).json({
-        error: "Order not found",
-      });
+     throw new HttpError(404, "Order not found");
     }
 
     // Update the order status
@@ -162,11 +183,9 @@ export const deleteOrder = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  // Return 404 if order does not exist
+  // Throw a 404 Not Found error if the order does not exist
   if (!existingOrder) {
-    return res.status(404).json({
-      error: "Order not found",
-    });
+   throw new HttpError(404, "Order not found");
   }
 
   // Delete the order
